@@ -13,6 +13,9 @@
    cp .env.example .env
    ```
 
+   ```Powershell
+   Copy-Item .env.example .env
+   ```
 2. Depuis la racine du dépôt, démarrer les services :
 
    ```bash
