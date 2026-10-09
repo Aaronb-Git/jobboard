@@ -9,7 +9,7 @@ defineProps<{
   name_company: string
   one_sentence_description: string | null
   full_description: string | null
-  wages: number | null
+  wages: string | null
   place: string | null
   working_time: string | null
   advantages: string | null
@@ -52,7 +52,7 @@ defineProps<{
                 {{ full_description }}
             </p>
 
-            <p v-if="wages" class="mb-2">
+            <p v-if="wages !== null" class="mb-2">
                 <strong>Salaire : </strong>{{ wages }} €
             </p>
 
