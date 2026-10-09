@@ -24,6 +24,33 @@ app.get('/api/health', async (_request, response) => {
   }
 })
 
+app.get('/api/ads', async (_request, response) => {
+  try {
+    const [ads] = await database.query(`
+      SELECT
+        ads.id,
+        ads.title,
+        companies.name AS name_company,
+        ads.one_sentence_description,
+        ads.full_description,
+        ads.wages,
+        ads.place,
+        ads.working_time,
+        ads.advantages,
+        ads.diploma_needed
+      FROM ads
+      INNER JOIN companies ON companies.id = ads.company_id
+      ORDER BY ads.id DESC
+    `)
+
+    response.json(ads)
+  } catch {
+    response.status(500).json({
+      message: 'Impossible de récupérer les annonces.',
+    })
+  }
+})
+
 app.listen(port, '0.0.0.0', () => {
   console.log(`API listening on port ${port}`)
 })
