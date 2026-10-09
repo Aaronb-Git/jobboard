@@ -7,9 +7,10 @@
     </h1>
 
     <div class="flex gap-4">
-      <button class="rounded bg-gray-700 px-4 py-2 text-white">
-        Se connecter
-      </button>
+      <
+       <RouterLink to="/login" class="rounded bg-gray-700 px-4 py-2 text-white">
+          Se connecter
+        </RouterLink>
 
       <button class="rounded bg-indigo-600 px-4 py-2 text-white">
         S'inscrire
