@@ -1,6 +1,6 @@
 import express from 'express'
 import mysql from 'mysql2/promise'
-import ResultSetHeader from 'mysql2'
+import type {ResultSetHeader} from 'mysql2'
 import * as argon2 from 'argon2';
 
 const app = express()

@@ -6,18 +6,32 @@ const nom = ref('')
 const prenom = ref('')
 const email = ref('')
 const password = ref('')
+const message = ref('')
 
-function register(){
-    console.log(nom)
-    console.log(prenom)
-    console.log(email)
-    console.log(password)
+async function register(){
+    const user ={
+        name : nom.value,
+        firstname : prenom.value,
+        email : email.value,
+        password : password.value
+    }
+    const response = await fetch('/api/users', {
+        method : 'POST',
+        headers : {
+            'Content-type' : 'application/json'
+        },
+        body : JSON.stringify(user)
+    })
+
+    const data = await response.json()
+
+    if(!response.ok){
+        message.value = "erreur"
+    }else {
+        message.value = "succès"
+    }
 }
-
-
 </script>
-
-
 <template>
     <main class="min-h-screen flex items-center justify-center bg-red-300">
         <form @submit.prevent="register" class="p-8 rounded-xl shadow-lg max-w-full">
@@ -31,6 +45,7 @@ function register(){
             <button type="submit" class="w-full bg-red-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-red-700 transition-colors duration-300 cursor-pointer">
             S'inscrire
             </button>
+                <p> {{message}}</p>
         </form>
     </main>
 </template>
