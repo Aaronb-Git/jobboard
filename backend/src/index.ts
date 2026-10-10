@@ -50,6 +50,34 @@ app.get('/api/ads', async (_request, response) => {
     })
   }
 })
+interface User {
+  name: string;
+  firstname: string;
+  email: string;
+  password?: string;
+}
+app.post('/api/users', async(request, response)=>{
+  const {name, firstname, email, password} = request.body;
+
+  if(typeof(name) != "string" || typeof(firstname)  != "string"  || typeof(email) != "string" || typeof(password) != "string"){
+    return response.status(400).json({message : "Format invalide"});
+  }
+
+  let cleandedN = name.trim();
+  let cleanedF = firstname.trim();
+  let cleanedE = email.trim();
+
+  if(cleanedE === "" || cleandedN === "" || cleanedF === "" || password === ""){
+      return response.status(400).json({message : "Champ obligatoire"})
+  }
+
+const user: User = {
+  name : cleandedN,
+  firstname : cleanedF,
+  email : cleanedE,
+}
+  return response.json(user);
+})
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`API listening on port ${port}`)
