@@ -1,6 +1,7 @@
 import express from 'express'
 import mysql from 'mysql2/promise'
 import type {ResultSetHeader} from 'mysql2'
+import type {RowDataPacket} from 'mysql2'
 import * as argon2 from 'argon2';
 
 const app = express()
@@ -59,6 +60,11 @@ interface User {
   email: string;
   password?: string;
 }
+interface LoginUser extends RowDataPacket {
+  id : number,
+  password_hash : string | null,
+
+}
 app.post('/api/users', async(request, response)=>{
   const {name, firstname, email, password} = request.body;
 
@@ -96,7 +102,43 @@ app.post('/api/users', async(request, response)=>{
       message : "Impossible de créer l'utilisateur."
     });
   }
+});
 
+app.post('/api/login', async(request, response)=> {
+  const {email, password} = request.body;
+
+    if(typeof email != "string" || typeof password != "string"){
+      return response.status(400).json({message : "Format invalide"});
+    }
+
+    const cleanedE = email.trim();
+
+    if (cleanedE === "" || password === ""){
+      return response.status(400).json({message : "Champ obligatoire"});
+    }
+    try{
+      const[rows] = await database.execute<LoginUser[]>(`
+        SELECT id,
+        password_hash
+        FROM users
+        WHERE email = ?`,[cleanedE])
+        if(rows.length === 0){
+          return response.status(401).json({message : "Email ou mot de passe incorrect"})
+        }
+        const user = rows[0];
+        if(user.password_hash === null){
+          return response.status(401).json({message : "Email ou mot de passe incorrect"})
+        }
+        const isValid = await argon2.verify(user.password_hash, password)
+        if(!isValid){
+          return response.status(401).json({message : "Email ou mot de passe incorrect"})
+        }
+        return response.status(200).json({message : "identifiants vérifiés"})
+    }catch{
+      response.status(500).json({
+        message : "Impossible de se connecter"
+      })
+    }
 });
 
 app.listen(port, '0.0.0.0', () => {
