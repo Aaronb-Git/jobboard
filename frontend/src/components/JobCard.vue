@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const afficherDetails = ref(false)
 
 defineProps<{
@@ -16,6 +18,15 @@ defineProps<{
   diploma_needed: string | null
 }>()
 
+function apply() {
+    const isConnected = localStorage.getItem('isConnected') === 'true'
+
+    if (isConnected) {
+        console.log('OK')
+    } else {
+        router.push('/login')
+    }
+}
 </script>
 
 
@@ -29,7 +40,7 @@ defineProps<{
                 <p class="text-gray-600">{{ name_company }}</p>
             </div>
 
-            <button class="bg-blue-600 text-white rounded-lg px-4 py-2 hover:bg-blue-700">
+            <button @click="apply" class="bg-blue-600 text-white rounded-lg px-4 py-2 hover:bg-blue-700 cursor-pointer">
                 Apply
             </button>
         </div>
