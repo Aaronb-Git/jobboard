@@ -1,3 +1,4 @@
+
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -5,7 +6,7 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 const afficherDetails = ref(false)
 
-defineProps<{
+const props = defineProps<{
   id: number
   title: string
   name_company: string
@@ -18,18 +19,29 @@ defineProps<{
   diploma_needed: string | null
 }>()
 
-function apply() {
-    const isConnected = localStorage.getItem('isConnected') === 'true'
 
-    if (isConnected) {
-        console.log('OK')
-    } else {
-        router.push('/login')
+async function apply() {
+    try {
+        const response = await fetch('/api/me')
+
+        if (response.ok) {
+            const user = await response.json()
+
+            console.log('Utilisateur connecté')
+            console.log('ID utilisateur :', user.id)
+            console.log('ID annonce :', props.id)
+
+        } else if (response.status === 401) {
+            await router.push('/login')
+        } else {
+            console.error('Erreur du serveur :', response.status)
+        }
+    } catch (error) {
+        console.error('Erreur de vérification de session', error)
     }
 }
+
 </script>
-
-
 
 <template>
     <article class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 w-3/5 mx-auto my-5">
@@ -40,7 +52,10 @@ function apply() {
                 <p class="text-gray-600">{{ name_company }}</p>
             </div>
 
-            <button @click="apply" class="bg-blue-600 text-white rounded-lg px-4 py-2 hover:bg-blue-700 cursor-pointer">
+            <button
+                @click="apply"
+                class="bg-blue-600 text-white rounded-lg px-4 py-2 hover:bg-blue-700 cursor-pointer"
+            >
                 Apply
             </button>
         </div>
@@ -53,11 +68,7 @@ function apply() {
             {{ one_sentence_description }}
         </p>
 
-        
-
         <div v-if="afficherDetails" class="mt-4 border-t border-gray-200 pt-4">
-
-            
 
             <p v-if="full_description" class="mb-3 whitespace-pre-line">
                 {{ full_description }}
@@ -68,18 +79,17 @@ function apply() {
             </p>
 
             <p v-if="working_time" class="mb-2">
-                <strong>Temps de travail : </strong> {{ working_time }}
+                <strong>Temps de travail : </strong>{{ working_time }}
             </p>
 
             <p v-if="advantages" class="mb-2">
-                <strong>Avantages : </strong> {{ advantages }}
+                <strong>Avantages : </strong>{{ advantages }}
             </p>
 
             <p v-if="diploma_needed" class="mb-2">
-                <strong>Diplôme demandé : </strong> {{ diploma_needed }}
+                <strong>Diplôme demandé : </strong>{{ diploma_needed }}
             </p>
 
-            
         </div>
 
         <button

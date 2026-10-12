@@ -1,33 +1,48 @@
 <script setup lang="ts">
-
-import { ref } from 'vue'
+import { ref, inject } from 'vue'
+import { useRouter } from 'vue-router'
 
 const email = ref('')
 const password = ref('')
 const message = ref('')
+const router = useRouter()
 
-async function  login() {
-    const user ={
-        email : email.value,
-        password : password.value
+const updateNavbar = inject<() => Promise<void>>('updateNavbar')
+
+async function login() {
+    const user = {
+        email: email.value,
+        password: password.value
     }
-    const response = await fetch('/api/login', {
-        method : 'POST',
-        headers : {
-            'content-type' :'application/json'
-        },
-        body : JSON.stringify(user)
-    })
-    const data = await response.json()
-    if(!response.ok){
-        message.value = "error"
-    }else{
-        message.value = "succès"
+
+    try {
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify(user)
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+            message.value = data.message
+        } else {
+            message.value = 'Connexion réussie'
+
+            await updateNavbar?.()
+
+            await router.push('/')
+        }
+    } catch (error) {
+        message.value = 'Erreur lors de la connexion'
+        console.error(error)
     }
-    
 }
-
 </script>
+
+
 
 <template>
     <main class="min-h-screen flex items-center justify-center bg-blue-300">
