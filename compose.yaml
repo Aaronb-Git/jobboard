@@ -23,6 +23,7 @@ services:
       DB_NAME: ${MARIADB_DATABASE:?Copy .env.example to .env first}
       DB_USER: ${MARIADB_USER:?Copy .env.example to .env first}
       DB_PASSWORD: ${MARIADB_PASSWORD:?Copy .env.example to .env first}
+      SESSION_SECRET: ${SESSION_SECRET:?Copy .env.example to .env first}
     volumes:
       - ./backend:/app
       - backend_node_modules:/app/node_modules
