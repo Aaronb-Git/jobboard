@@ -3,7 +3,9 @@ import mysql from 'mysql2/promise'
 import type {ResultSetHeader} from 'mysql2'
 import type {RowDataPacket} from 'mysql2'
 import * as argon2 from 'argon2';
+import session from 'express-session'
 
+const sessionSecret = process.env.SESSION_SECRET
 const app = express()
 const port = Number(process.env.PORT ?? 3000)
 
@@ -18,6 +20,20 @@ const database = mysql.createPool({
   connectionLimit: 5,
 })
 
+if(sessionSecret === "" || sessionSecret === undefined){
+  throw new Error("SESSION_SECRET manquant");
+}
+
+app.use(session({
+  secret: sessionSecret,
+  resave: false,
+  saveUninitialized: false,
+  cookie : {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: false
+  }
+}))
 app.get('/api/health', async (_request, response) => {
   try {
     await database.query('SELECT 1')
@@ -133,13 +149,42 @@ app.post('/api/login', async(request, response)=> {
         if(!isValid){
           return response.status(401).json({message : "Email ou mot de passe incorrect"})
         }
-        return response.status(200).json({message : "identifiants vérifiés"})
+
+        request.session.regenerate((error)=>{
+          if(error){
+            return response.status(500).json({message : "Impossible de se connecter"})
+          }
+          request.session.userId = user.id
+          
+          request.session.save((saveError)=>{
+          if(saveError){
+            return response.status(500).json({message : "Impossible de se connecter"})
+          }
+          return response.status(200).json({message : "Connexion réussie"})
+          })
+        })
     }catch{
       response.status(500).json({
         message : "Impossible de se connecter"
       })
     }
 });
+
+app.get('/api/me',(request, response)=>{
+  if(!request.session.userId){
+    return response.status(401).json({message : "Non connecté"})
+  }
+  return response.status(200).json({id : request.session.userId})
+})
+app.post('/api/logout', (request,response)=>{
+  request.session.destroy((error)=> {
+    if(error){
+      return response.status(500).json({message : "impossible de se deconnecter"});
+    }
+    response.clearCookie('connect.sid', {path:'/'})
+    return response.status(200).json({message : "Déconnexion réussie"})
+  })
+})
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`API listening on port ${port}`)
