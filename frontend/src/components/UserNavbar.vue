@@ -1,4 +1,24 @@
 
+<script setup lang="ts">
+import { inject } from 'vue'
+
+const updateNavbar = inject<() => Promise<void>>('updateNavbar')
+
+async function logout() {
+    try {
+        const response = await fetch('/api/logout', {
+            method: 'POST'
+        })
+
+        if (response.ok) {
+            await updateNavbar?.()
+        }
+    } catch {
+        console.error('Erreur de déconnexion')
+    }
+}
+</script>
+
 <template>
   <nav class="flex items-center justify-between bg-gray-900 px-6 py-4">
 
@@ -14,8 +34,8 @@
         </svg>
       </RouterLink>
 
-      <button class="rounded bg-indigo-600 px-4 py-2 text-white cursor-pointer hover:bg-indigo-700">
-        Déconnexion
+      <button @click="logout" class="rounded bg-indigo-600 px-4 py-2 text-white cursor-pointer hover:bg-indigo-700">
+          Déconnexion
       </button>
     </div>
 
