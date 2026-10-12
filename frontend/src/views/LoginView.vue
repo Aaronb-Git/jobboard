@@ -6,15 +6,26 @@ const email = ref('')
 const password = ref('')
 const message = ref('')
 
-function login() {
-    if (email.value === 'admin@gmail.com' && password.value === 'admin123') {
-        message.value = 'Connexion réussie !'
-    } else {
-        message.value = 'Email ou mot de passe incorrect'
+async function  login() {
+    const user ={
+        email : email.value,
+        password : password.value
     }
+    const response = await fetch('/api/login', {
+        method : 'POST',
+        headers : {
+            'content-type' :'application/json'
+        },
+        body : JSON.stringify(user)
+    })
+    const data = await response.json()
+    if(!response.ok){
+        message.value = "error"
+    }else{
+        message.value = "succès"
+    }
+    
 }
-
-
 
 </script>
 
