@@ -81,6 +81,10 @@ interface LoginUser extends RowDataPacket {
   password_hash : string | null,
 
 }
+interface AdRow extends RowDataPacket {
+  id : number
+}
+
 app.post('/api/users', async(request, response)=>{
   const {name, firstname, email, password} = request.body;
 
@@ -175,7 +179,8 @@ app.get('/api/me',(request, response)=>{
     return response.status(401).json({message : "Non connecté"})
   }
   return response.status(200).json({id : request.session.userId})
-})
+});
+
 app.post('/api/logout', (request,response)=>{
   request.session.destroy((error)=> {
     if(error){
@@ -184,8 +189,32 @@ app.post('/api/logout', (request,response)=>{
     response.clearCookie('connect.sid', {path:'/'})
     return response.status(200).json({message : "Déconnexion réussie"})
   })
-})
+});
+
+app.post('/api/ads/:id/applications', async (request, response)=>{
+  if(!request.session.userId){
+    return response.status(401).json({message : "Connectez-vous pour postuler"})
+  }
+
+  const adId = Number(request.params.id)
+  if(!Number.isInteger(adId) || adId < 1){
+    return response.status(400).json({ message : "Identifiant d'annonce invalide"})
+  }
+  try{
+    const [row] = await database.execute<AdRow[]>(`
+      SELECT id
+      FROM ads
+      WHERE id = ?`, [adId])
+      if(row.length === 0){
+        return response.status(404).json({message : "Annonce introuvable"})
+      }else{
+        response.json({message : "Candidature reçue"})
+      }
+  }catch{
+    response.status(500).json({message : "Impossible de postuler"})
+  }
+});
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`API listening on port ${port}`)
-})
+});
