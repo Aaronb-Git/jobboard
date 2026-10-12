@@ -25,12 +25,7 @@ async function apply() {
         const response = await fetch('/api/me')
 
         if (response.ok) {
-            const user = await response.json()
-
-            console.log('Utilisateur connecté')
-            console.log('ID utilisateur :', user.id)
-            console.log('ID annonce :', props.id)
-
+             await router.push(`/ads/${props.id}/apply`)
         } else if (response.status === 401) {
             await router.push('/login')
         } else {
