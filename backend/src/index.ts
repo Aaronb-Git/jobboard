@@ -1,6 +1,6 @@
 import express from 'express'
 import mysql from 'mysql2/promise'
-import type {ResultSetHeader} from 'mysql2'
+import {ResultSetHeader} from 'mysql2'
 import type {RowDataPacket} from 'mysql2'
 import * as argon2 from 'argon2';
 import session from 'express-session'
@@ -200,6 +200,12 @@ app.post('/api/ads/:id/applications', async (request, response)=>{
   if(!Number.isInteger(adId) || adId < 1){
     return response.status(400).json({ message : "Identifiant d'annonce invalide"})
   }
+  const msg = request.body.message
+  if(typeof msg != "string"){
+    return response.status(400).json({ message: "Format invalide"})
+  }
+  const cleanedMessage = msg.trim();
+  
   try{
     const [row] = await database.execute<AdRow[]>(`
       SELECT id
@@ -208,7 +214,14 @@ app.post('/api/ads/:id/applications', async (request, response)=>{
       if(row.length === 0){
         return response.status(404).json({message : "Annonce introuvable"})
       }else{
-        response.json({message : "Candidature reçue"})
+        const [result] = await database.execute<ResultSetHeader>(`
+          INSERT INTO applications
+          (ad_id,
+          user_id,
+          message)
+          VALUES (?,?,?)
+          `, [adId,request.session.userId, cleanedMessage])
+          response.status(201).json({id : result.insertId, message : "Candidature enregistrée"})
       }
   }catch{
     response.status(500).json({message : "Impossible de postuler"})
