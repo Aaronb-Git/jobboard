@@ -477,6 +477,50 @@ app.delete('/api/users/:id', async (request, response) => {
   }
 });
 
+app.put('/api/users/:id/password', async (request, response) => {
+    if (!request.session.userId) {
+        return response.status(401).json({message: 'Non connecté'})
+    }
+
+    const id = Number(request.params.id)
+
+    if (!Number.isInteger(id) || id <= 0) {
+        return response.status(400).json({message: 'ID invalide'})
+    }
+
+    if (request.session.userId !== id) {
+        return response.status(403).json({message: 'Accès interdit'})
+    }
+
+    const { newPassword } = request.body
+
+    if (typeof newPassword !== 'string') {
+        return response.status(400).json({message: 'Format invalide'})
+    }
+
+    if (newPassword.trim() === '') {
+        return response.status(400).json({message: 'Le mot de passe ne peut pas être vide ou contenir uniquement des espaces'})
+    }
+
+    try {
+        const passwordHash = await argon2.hash(newPassword)
+
+        const [resultat] = await database.execute<ResultSetHeader>(
+            'UPDATE users SET password_hash = ? WHERE id = ?',
+            [passwordHash, id]
+        )
+
+        if (resultat.affectedRows === 0) {
+            return response.status(404).json({message: 'Utilisateur introuvable'})
+        }
+
+        return response.status(200).json({message: 'Mot de passe modifié avec succès'})
+
+    } catch {
+        return response.status(500).json({message: 'Impossible de modifier le mot de passe'})
+    }
+})
+
 //-------------------------------------------------------------------------ads-------------------------------------------------------------------------------------------
 
 app.post('/api/ads', async (request, response) => {
