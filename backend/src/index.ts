@@ -194,7 +194,6 @@ app.get('/api/me', async(request, response)=>{
         const user = res[0];
         response.status(200).json({id : user.id, is_admin : user.is_admin===1})
       }
-      
   }catch{
     response.status(500).json({
         message : "Impossible de récuperer l'utilisateur connecté"
@@ -361,30 +360,6 @@ app.get('/api/users', async (request, response) => {
     response.status(500).json({message : "Impossible de récupérer les utilisateurs"})
   }
 })
-
-/*app.get('/api/me', async(request, response)=>{
-  if(!request.session.userId){
-    return response.status(401).json({message : "Non connecté"})
-  }
-  try{
-    const [res] = await database.execute<CurrentUserRow[]>(`
-      SELECT id,
-      is_admin
-      FROM  users
-      WHERE id = ?`, [request.session.userId])
-      if(res.length === 0){
-        return response.status(401).json({message : "Non connecté"})
-      }else {
-        const user = res[0];
-        response.status(200).json({id : user.id, is_admin : user.is_admin===1})
-      }
-      
-  }catch{
-    response.status(500).json({
-        message : "Impossible de récuperer l'utilisateur connecté"
-    })
-  }
-});*/ 
 
 app.put('/api/users/:id', async (request, response) => {
   const { name, firstname, email, phone, address } = request.body;
