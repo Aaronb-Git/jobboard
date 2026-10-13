@@ -84,6 +84,10 @@ interface LoginUser extends RowDataPacket {
 interface AdRow extends RowDataPacket {
   id : number
 }
+interface CurrentUserRow extends RowDataPacket {
+  id : number,
+  is_admin : number
+}
 
 app.post('/api/users', async(request, response)=>{
   const {name, firstname, email, password} = request.body;
@@ -174,11 +178,28 @@ app.post('/api/login', async(request, response)=> {
     }
 });
 
-app.get('/api/me',(request, response)=>{
+app.get('/api/me', async(request, response)=>{
   if(!request.session.userId){
     return response.status(401).json({message : "Non connecté"})
   }
-  return response.status(200).json({id : request.session.userId})
+  try{
+    const [res] = await database.execute<CurrentUserRow[]>(`
+      SELECT id,
+      is_admin
+      FROM  users
+      WHERE id = ?`, [request.session.userId])
+      if(res.length === 0){
+        return response.status(401).json({message : "Non connecté"})
+      }else {
+        const user = res[0];
+        response.status(200).json({id : user.id, is_admin : user.is_admin===1})
+      }
+      
+  }catch{
+    response.status(500).json({
+        message : "Impossible de récuperer l'utilisateur connecté"
+    })
+  }
 });
 
 app.post('/api/logout', (request,response)=>{
@@ -227,11 +248,6 @@ app.post('/api/ads/:id/applications', async (request, response)=>{
     response.status(500).json({message : "Impossible de postuler"})
   }
 });
-
-app.listen(port, '0.0.0.0', () => {
-  console.log(`API listening on port ${port}`)
-});
-
 
 //-----------------------------------------------------Company----------------------------------------------------------------------------
 
@@ -324,9 +340,20 @@ app.delete('/api/companies/:id', async (request, response) => {
 
 //----------------------------------------------------------------users------------------------------------------------------------------
 
-app.get('/api/users', async (_request, response) => {
+app.get('/api/users', async (request, response) => {
+  if(!request.session.userId){
+    return response.status(401).json({message : "Non connecté"})
+  }
   try{
+    const [res] = await database.execute<CurrentUserRow[]>(`
+      SELECT id,
+      is_admin
+      FROM users
+      WHERE id = ?`, [request.session.userId])
 
+      if(res.length === 0 || res[0].is_admin !== 1){
+        return response.status(403).json({message : "Accés interdit"})
+      }
     const [users] = await database.query("SELECT id, name, firstname, email, phone, address, is_admin FROM users;")
     response.json(users)
 
@@ -334,6 +361,30 @@ app.get('/api/users', async (_request, response) => {
     response.status(500).json({message : "Impossible de récupérer les utilisateurs"})
   }
 })
+
+/*app.get('/api/me', async(request, response)=>{
+  if(!request.session.userId){
+    return response.status(401).json({message : "Non connecté"})
+  }
+  try{
+    const [res] = await database.execute<CurrentUserRow[]>(`
+      SELECT id,
+      is_admin
+      FROM  users
+      WHERE id = ?`, [request.session.userId])
+      if(res.length === 0){
+        return response.status(401).json({message : "Non connecté"})
+      }else {
+        const user = res[0];
+        response.status(200).json({id : user.id, is_admin : user.is_admin===1})
+      }
+      
+  }catch{
+    response.status(500).json({
+        message : "Impossible de récuperer l'utilisateur connecté"
+    })
+  }
+});*/ 
 
 app.put('/api/users/:id', async (request, response) => {
   const { name, firstname, email, phone, address } = request.body;
@@ -372,7 +423,7 @@ app.put('/api/users/:id', async (request, response) => {
       }
     }
 
-    const [resultat] = await database.execute<ResultSetHeader>(`UPDATE usersSET name = ?, firstname = ?, email = ?, phone = ?, address = ? WHERE id = ?`,
+    const [resultat] = await database.execute<ResultSetHeader>(`UPDATE users SET name = ?, firstname = ?, email = ?, phone = ?, address = ? WHERE id = ?`,
       [name.trim(), firstname.trim(), email.trim(), phone ?? null, address ?? null, id]
     );
 
@@ -581,7 +632,6 @@ app.delete('/api/ads/:id', async (request, response) => {
   }
 });
 
-
 //-------------------------------------------------------------------applications------------------------------------------------------------------------
 
 app.get('/api/applications', async (request, response) => {
@@ -735,4 +785,8 @@ app.delete('/api/applications/:id', async (request, response) => {
   } catch {
     return response.status(500).json({message: "Impossible de supprimer la candidature"});
   }
+});
+
+app.listen(port, '0.0.0.0', () => {
+  console.log(`API listening on port ${port}`)
 });
