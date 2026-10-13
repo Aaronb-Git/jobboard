@@ -1,31 +1,66 @@
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const afficherDetails = ref(false)
+const dejaPostule = ref(false)
+const verificationEnCours = ref(true)
+const erreurVerification = ref(false)
 
 const props = defineProps<{
-  id: number
-  title: string
-  name_company: string
-  one_sentence_description: string | null
-  full_description: string | null
-  wages: string | null
-  place: string | null
-  working_time: string | null
-  advantages: string | null
-  diploma_needed: string | null
+    id: number
+    title: string
+    name_company: string
+    one_sentence_description: string | null
+    full_description: string | null
+    wages: string | null
+    place: string | null
+    working_time: string | null
+    advantages: string | null
+    diploma_needed: string | null
 }>()
 
+async function verifierCandidature() {
+    verificationEnCours.value = true
+    erreurVerification.value = false
+    dejaPostule.value = false
 
-async function apply() {
     try {
-        const response = await fetch('/api/me')
+        const response = await fetch(`/api/ads/${props.id}/applied`, {
+            credentials: 'include'
+        })
 
         if (response.ok) {
-             await router.push(`/ads/${props.id}/apply`)
+            const data = await response.json()
+            dejaPostule.value = data.applied === true
+        } else if (response.status !== 401) {
+            erreurVerification.value = true
+            console.error('Erreur de vérification :', response.status)
+        }
+    } catch (error) {
+        erreurVerification.value = true
+        console.error('Erreur de vérification de candidature', error)
+    } finally {
+        verificationEnCours.value = false
+    }
+}
+
+watch(() => props.id, verifierCandidature, { immediate: true })
+
+async function apply() {
+    if (verificationEnCours.value || dejaPostule.value || erreurVerification.value) {
+        return
+    }
+
+    try {
+        const response = await fetch('/api/me', {
+            credentials: 'include'
+        })
+
+        if (response.ok) {
+            await router.push(`/ads/${props.id}/apply`)
         } else if (response.status === 401) {
             await router.push('/login')
         } else {
@@ -35,7 +70,6 @@ async function apply() {
         console.error('Erreur de vérification de session', error)
     }
 }
-
 </script>
 
 <template>
@@ -47,11 +81,20 @@ async function apply() {
                 <p class="text-gray-600">{{ name_company }}</p>
             </div>
 
-            <button
-                @click="apply"
-                class="bg-blue-600 text-white rounded-lg px-4 py-2 hover:bg-blue-700 cursor-pointer"
+            <span
+                v-if="dejaPostule"
+                class="bg-green-100 text-green-700 rounded-lg px-4 py-2 font-medium"
             >
-                Apply
+                Déjà postulé
+            </span>
+
+            <button
+                v-else
+                @click="apply"
+                :disabled="verificationEnCours || erreurVerification"
+                class="bg-blue-600 text-white rounded-lg px-4 py-2 hover:bg-blue-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                {{ verificationEnCours ? 'Vérification...' : erreurVerification ? 'Indisponible' : 'Apply' }}
             </button>
         </div>
 
@@ -89,10 +132,10 @@ async function apply() {
 
         <button
             @click="afficherDetails = !afficherDetails"
-            class="text-blue-600 font-medium hover:underline mt-4"
+            class="text-blue-600 font-medium hover:underline mt-4 cursor-pointer"
             :aria-expanded="afficherDetails"
         >
-            {{ afficherDetails ? "Show less" : "Learn more" }}
+            {{ afficherDetails ? 'Show less' : 'Learn more' }}
         </button>
 
     </article>

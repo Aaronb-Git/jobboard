@@ -815,6 +815,31 @@ app.delete('/api/applications/:id', async (request, response) => {
   }
 });
 
+
+app.get('/api/ads/:id/applied', async (request, response) => {
+    if (!request.session.userId) {
+        return response.status(401).json({message: 'Non connecté'})
+    }
+
+    const adId = Number(request.params.id)
+
+    if (!Number.isInteger(adId) || adId <= 0) {
+        return response.status(400).json({message: 'ID annonce invalide'})
+    }
+
+    try {
+        const [applications] = await database.execute<RowDataPacket[]>(
+            'SELECT id FROM applications WHERE ad_id = ? AND user_id = ? LIMIT 1',
+            [adId, request.session.userId]
+        )
+
+        return response.status(200).json({applied: applications.length > 0})
+    } catch (error) {
+        console.error('Erreur vérification candidature :', error)
+        return response.status(500).json({message: 'Impossible de vérifier la candidature'})
+    }
+})
+
 app.listen(port, '0.0.0.0', () => {
   console.log(`API listening on port ${port}`)
 });
