@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import {useRoute} from 'vue-router'
+import {useRouter} from 'vue-router'
 
 const message = ref('')
 const feedback = ref('')
-const route =useRoute()
+const route = useRoute()
+const router = useRouter()
+
 
 async function submitApplication(){
     const appli = {
@@ -18,10 +21,13 @@ async function submitApplication(){
             'Content-Type': 'application/json',
         },
         body : JSON.stringify(appli)
+        
     })
+    
     const data = await response.json()
 
     feedback.value = data.message;
+    await router.push('/')
 }
 </script>
 <template>
