@@ -178,26 +178,35 @@ app.post('/api/login', async(request, response)=> {
     }
 });
 
-app.get('/api/me', async(request, response)=>{
-  if(!request.session.userId){
-    return response.status(401).json({message : "Non connecté"})
+app.get('/api/me', async (request, response) => {
+  if (!request.session.userId) {
+    return response.status(401).json({message: "Non connecté"});
   }
-  try{
-    const [res] = await database.execute<CurrentUserRow[]>(`
-      SELECT id,
-      is_admin
-      FROM  users
-      WHERE id = ?`, [request.session.userId])
-      if(res.length === 0){
-        return response.status(401).json({message : "Non connecté"})
-      }else {
-        const user = res[0];
-        response.status(200).json({id : user.id, is_admin : user.is_admin===1})
-      }
-  }catch{
-    response.status(500).json({
-        message : "Impossible de récuperer l'utilisateur connecté"
-    })
+
+  try {
+    const [res] = await database.execute<CurrentUserRow[]>(
+      "SELECT id, name, firstname, email, phone, address, is_admin FROM users WHERE id = ?",
+      [request.session.userId]
+    );
+
+    if (res.length === 0) {
+      return response.status(401).json({message: "Non connecté"});
+    }
+
+    const user = res[0];
+
+    return response.status(200).json({
+      id: user.id,
+      name: user.name,
+      firstname: user.firstname,
+      email: user.email,
+      phone: user.phone,
+      address: user.address,
+      is_admin: Boolean(user.is_admin)
+    });
+
+  } catch {
+    return response.status(500).json({message: "Impossible de récupérer l'utilisateur connecté"});
   }
 });
 
