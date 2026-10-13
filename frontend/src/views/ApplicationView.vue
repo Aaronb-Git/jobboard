@@ -25,12 +25,15 @@ async function submitApplication(){
 }
 </script>
 <template>
-    <h1>Postule pour l'annonce</h1>
-    <form @submit.prevent="submitApplication">
-        <textarea v-model="message"></textarea>
-        <p>{{ feedback }}</p>
-        <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors duration-300 cursor-pointer">
+    <main class = "min-h-screen flex items-center justify-center bg-green-300 p-6">
+        <form @submit.prevent="submitApplication" class = "p-8 rounded-xl shadow-lg w-full max-w-2xl">
+            <h1 class = "text-2xl font-bold text-center mb-6">Postule pour l'annonce</h1>
+            <label for = "application-message" class="block mb-2 font-medium">Votre message</label>
+            <textarea v-model="message" id ="application-message" rows = "6" placeholder = "SHOW US WHAT YOU GOT !!!" class="w-full p-3 shadow-lg rounded-lg mb-4 bg-blue-200 resize-y"></textarea>
+            <button type="submit" class="w-full bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors duration-300 cursor-pointer">
             Envoyer ma candidature
             </button>
-    </form>
+             <p v-if = "feedback" class = "text-center mt-4">{{ feedback }}</p>
+        </form>
+    </main>
     </template>
