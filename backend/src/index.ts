@@ -182,7 +182,6 @@ app.get('/api/me', async (request, response) => {
   if (!request.session.userId) {
     return response.status(401).json({message: "Non connecté"});
   }
-
   try {
     const [res] = await database.execute<CurrentUserRow[]>(
       "SELECT id, name, firstname, email, phone, address, is_admin FROM users WHERE id = ?",
@@ -262,7 +261,6 @@ app.post('/api/ads/:id/applications', async (request, response)=>{
 
 app.get('/api/companies', async (_request, response) => {
   try{
-
     const [companies] = await database.query("SELECT * FROM companies")
     response.json(companies)
 
@@ -273,8 +271,19 @@ app.get('/api/companies', async (_request, response) => {
 
 
 app.post('/api/companies', async (request, response) => {
+  if (!request.session.userId) {
+    return response.status(401).json({message: "Non connecté"});
+  }
   const { name, company_description } = request.body;
   try {
+    const [res] = await database.execute<CurrentUserRow[]>(`
+      SELECT id,
+      is_admin
+      FROM users
+      WHERE id = ?`, [request.session.userId])
+  if(res.length === 0 || res[0].is_admin !== 1){
+    return response.status(403).json({message : "Accés interdit"})
+  }
     if (typeof name !== "string") {
       return response.status(400).json({ message: "Format invalide" });
     }
@@ -299,6 +308,9 @@ app.post('/api/companies', async (request, response) => {
 });
 
 app.put('/api/companies/:id', async (request, response) => {
+  if (!request.session.userId) {
+    return response.status(401).json({message: "Non connecté"});
+  }
   const { name, company_description } = request.body;
   const id = Number(request.params.id);
 
@@ -311,6 +323,14 @@ app.put('/api/companies/:id', async (request, response) => {
   }
 
   try {
+     const [res] = await database.execute<CurrentUserRow[]>(`
+      SELECT id,
+      is_admin
+      FROM users
+      WHERE id = ?`, [request.session.userId])
+  if(res.length === 0 || res[0].is_admin !== 1){
+    return response.status(403).json({message : "Accés interdit"})
+  }
     const [resultat] = await database.execute<ResultSetHeader>("UPDATE companies SET name = ?, company_description = ? WHERE id = ?",[name.trim(), company_description ?? null, id]);
 
     if (resultat.affectedRows === 0) {
@@ -326,12 +346,23 @@ app.put('/api/companies/:id', async (request, response) => {
 
 
 app.delete('/api/companies/:id', async (request, response) => {
+   if (!request.session.userId) {
+    return response.status(401).json({message: "Non connecté"});
+  }
   const id = Number(request.params.id);
 
   if (!Number.isInteger(id) || id <= 0) {
     return response.status(400).json({ message: "ID invalide" });
   }
   try {
+     const [res] = await database.execute<CurrentUserRow[]>(`
+      SELECT id,
+      is_admin
+      FROM users
+      WHERE id = ?`, [request.session.userId])
+  if(res.length === 0 || res[0].is_admin !== 1){
+    return response.status(403).json({message : "Accés interdit"})
+  }
     const [resultat] = await database.execute<ResultSetHeader>("DELETE FROM companies WHERE id = ?",[id]);
 
     if (resultat.affectedRows === 0) {
