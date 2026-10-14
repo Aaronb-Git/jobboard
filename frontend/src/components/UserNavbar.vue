@@ -1,8 +1,9 @@
-
 <script setup lang="ts">
 import { inject } from 'vue'
+import {useRouter} from 'vue-router'
 
 const updateNavbar = inject<() => Promise<void>>('updateNavbar')
+const router = useRouter()
 
 async function logout() {
     try {
@@ -12,6 +13,8 @@ async function logout() {
 
         if (response.ok) {
             await updateNavbar?.()
+            await router.push('/')
+            
         }
     } catch {
         console.error('Erreur de déconnexion')

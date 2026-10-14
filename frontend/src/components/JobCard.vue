@@ -1,31 +1,134 @@
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-const afficherDetails = ref(false)
 
 const props = defineProps<{
-  id: number
-  title: string
-  name_company: string
-  one_sentence_description: string | null
-  full_description: string | null
-  wages: string | null
-  place: string | null
-  working_time: string | null
-  advantages: string | null
-  diploma_needed: string | null
+    id: number
+    title: string
+    name_company: string
+    one_sentence_description: string | null
+    place: string | null
 }>()
 
+type AdDetails = {
+    full_description: string | null
+    wages: string | null
+    working_time: string | null
+    advantages: string | null
+    diploma_needed: string | null
+}
 
-async function apply() {
+const afficherDetails = ref(false)
+const details = ref<AdDetails | null>(null)
+const chargementDetails = ref(false)
+const erreurDetails = ref(false)
+
+const dejaPostule = ref(false)
+const verificationEnCours = ref(true)
+const erreurVerification = ref(false)
+
+async function verifierCandidature() {
+    verificationEnCours.value = true
+    erreurVerification.value = false
+    dejaPostule.value = false
+
     try {
-        const response = await fetch('/api/me')
+        const response = await fetch(`/api/ads/${props.id}/applied`, {
+            credentials: 'include'
+        })
 
         if (response.ok) {
-             await router.push(`/ads/${props.id}/apply`)
+            const data = await response.json()
+            dejaPostule.value = data.applied === true
+        } else if (response.status !== 401) {
+            erreurVerification.value = true
+            console.error('Erreur de vérification :', response.status)
+        }
+    } catch (error) {
+        erreurVerification.value = true
+        console.error('Erreur de vérification de candidature', error)
+    } finally {
+        verificationEnCours.value = false
+    }
+}
+
+watch(() => props.id, verifierCandidature, { immediate: true })
+
+let detailsRequestId = 0
+
+watch(() => props.id, () => {
+    detailsRequestId++
+    afficherDetails.value = false
+    details.value = null
+    chargementDetails.value = false
+    erreurDetails.value = false
+})
+
+async function toggleDetails() {
+    if (afficherDetails.value) {
+        afficherDetails.value = false
+        return
+    }
+
+    if (details.value !== null) {
+        afficherDetails.value = true
+        return
+    }
+
+    if (chargementDetails.value) {
+        return
+    }
+
+    const requestId = ++detailsRequestId
+    const adId = props.id
+
+    chargementDetails.value = true
+    erreurDetails.value = false
+
+    try {
+        const response = await fetch(`/api/ads/${adId}/details`)
+
+        if (!response.ok) {
+            throw new Error('Impossible de récupérer les détails')
+        }
+
+        const data: AdDetails = await response.json()
+
+        if (requestId !== detailsRequestId) {
+            return
+        }
+
+        details.value = data
+        afficherDetails.value = true
+    } catch (error) {
+        if (requestId !== detailsRequestId) {
+            return
+        }
+
+        erreurDetails.value = true
+        console.error('Erreur de chargement des détails :', error)
+    } finally {
+        if (requestId === detailsRequestId) {
+            chargementDetails.value = false
+        }
+    }
+}
+
+async function apply() {
+    if (verificationEnCours.value || dejaPostule.value || erreurVerification.value) {
+        return
+    }
+
+    try {
+        const response = await fetch('/api/me', {
+            credentials: 'include'
+        })
+
+        if (response.ok) {
+            await router.push(`/ads/${props.id}/apply`)
         } else if (response.status === 401) {
             await router.push('/login')
         } else {
@@ -35,7 +138,6 @@ async function apply() {
         console.error('Erreur de vérification de session', error)
     }
 }
-
 </script>
 
 <template>
@@ -47,11 +149,20 @@ async function apply() {
                 <p class="text-gray-600">{{ name_company }}</p>
             </div>
 
-            <button
-                @click="apply"
-                class="bg-blue-600 text-white rounded-lg px-4 py-2 hover:bg-blue-700 cursor-pointer"
+            <span
+                v-if="dejaPostule"
+                class="bg-green-100 text-green-700 rounded-lg px-4 py-2 font-medium"
             >
-                Apply
+                Déjà postulé
+            </span>
+
+            <button
+                v-else
+                @click="apply"
+                :disabled="verificationEnCours || erreurVerification"
+                class="bg-blue-600 text-white rounded-lg px-4 py-2 hover:bg-blue-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                {{ verificationEnCours ? 'Vérification...' : erreurVerification ? 'Indisponible' : 'Apply' }}
             </button>
         </div>
 
@@ -63,37 +174,46 @@ async function apply() {
             {{ one_sentence_description }}
         </p>
 
-        <div v-if="afficherDetails" class="mt-4 border-t border-gray-200 pt-4">
-
-            <p v-if="full_description" class="mb-3 whitespace-pre-line">
-                {{ full_description }}
+        <div
+            v-if="afficherDetails && details"
+            class="mt-4 border-t border-gray-200 pt-4"
+        >
+            <p
+                v-if="details.full_description"
+                class="mb-3 whitespace-pre-line"
+            >
+                {{ details.full_description }}
             </p>
 
-            <p v-if="wages !== null" class="mb-2">
-                <strong>Salaire : </strong>{{ wages }} €
+            <p v-if="details.wages !== null" class="mb-2">
+                <strong>Salaire : </strong>{{ details.wages }} €
             </p>
 
-            <p v-if="working_time" class="mb-2">
-                <strong>Temps de travail : </strong>{{ working_time }}
+            <p v-if="details.working_time" class="mb-2">
+                <strong>Temps de travail : </strong>{{ details.working_time }}
             </p>
 
-            <p v-if="advantages" class="mb-2">
-                <strong>Avantages : </strong>{{ advantages }}
+            <p v-if="details.advantages" class="mb-2">
+                <strong>Avantages : </strong>{{ details.advantages }}
             </p>
 
-            <p v-if="diploma_needed" class="mb-2">
-                <strong>Diplôme demandé : </strong>{{ diploma_needed }}
+            <p v-if="details.diploma_needed" class="mb-2">
+                <strong>Diplôme demandé : </strong>{{ details.diploma_needed }}
             </p>
-
         </div>
 
         <button
-            @click="afficherDetails = !afficherDetails"
-            class="text-blue-600 font-medium hover:underline mt-4"
+            @click="toggleDetails"
+            :disabled="chargementDetails"
+            class="text-blue-600 font-medium hover:underline mt-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             :aria-expanded="afficherDetails"
         >
-            {{ afficherDetails ? "Show less" : "Learn more" }}
+            {{ chargementDetails ? 'Chargement...' : afficherDetails ? 'Show less' : 'Learn more' }}
         </button>
+
+        <p v-if="erreurDetails" role="alert" class="text-red-600 mt-2">
+            Impossible de charger les détails de l'annonce.
+        </p>
 
     </article>
 </template>

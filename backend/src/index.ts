@@ -508,6 +508,50 @@ app.delete('/api/users/:id', async (request, response) => {
   }
 });
 
+app.put('/api/users/:id/password', async (request, response) => {
+    if (!request.session.userId) {
+        return response.status(401).json({message: 'Non connecté'})
+    }
+
+    const id = Number(request.params.id)
+
+    if (!Number.isInteger(id) || id <= 0) {
+        return response.status(400).json({message: 'ID invalide'})
+    }
+
+    if (request.session.userId !== id) {
+        return response.status(403).json({message: 'Accès interdit'})
+    }
+
+    const { newPassword } = request.body
+
+    if (typeof newPassword !== 'string') {
+        return response.status(400).json({message: 'Format invalide'})
+    }
+
+    if (newPassword.trim() === '') {
+        return response.status(400).json({message: 'Le mot de passe ne peut pas être vide ou contenir uniquement des espaces'})
+    }
+
+    try {
+        const passwordHash = await argon2.hash(newPassword)
+
+        const [resultat] = await database.execute<ResultSetHeader>(
+            'UPDATE users SET password_hash = ? WHERE id = ?',
+            [passwordHash, id]
+        )
+
+        if (resultat.affectedRows === 0) {
+            return response.status(404).json({message: 'Utilisateur introuvable'})
+        }
+
+        return response.status(200).json({message: 'Mot de passe modifié avec succès'})
+
+    } catch {
+        return response.status(500).json({message: 'Impossible de modifier le mot de passe'})
+    }
+})
+
 //-------------------------------------------------------------------------ads-------------------------------------------------------------------------------------------
 
 app.post('/api/ads', async (request, response) => {
@@ -646,6 +690,60 @@ app.delete('/api/ads/:id', async (request, response) => {
     return response.status(500).json({message: "Impossible de supprimer l'annonce"});
   }
 });
+
+
+app.get('/api/ads/preview', async (_request, response) => {
+  try {
+    const [ads] = await database.query(`
+      SELECT
+        ads.id,
+        ads.title,
+        companies.name AS name_company,
+        ads.one_sentence_description,
+        ads.place
+      FROM ads
+      INNER JOIN companies ON companies.id = ads.company_id
+      ORDER BY ads.id DESC
+    `)
+
+    response.json(ads)
+  } catch {
+    response.status(500).json({
+      message: 'Impossible de récupérer les annonces.',
+    })
+  }
+})
+
+app.get('/api/ads/:id/details', async (request, response) => {
+    const id = Number(request.params.id)
+
+    if (!Number.isInteger(id) || id <= 0) {
+        return response.status(400).json({message: 'ID invalide'})
+    }
+
+    try {
+        const [ads] = await database.execute<RowDataPacket[]>(
+            `SELECT
+                full_description,
+                wages,
+                working_time,
+                advantages,
+                diploma_needed
+            FROM ads
+            WHERE id = ?`,
+            [id]
+        )
+
+        if (ads.length === 0) {
+            return response.status(404).json({message: 'Annonce introuvable'})
+        }
+
+        return response.status(200).json(ads[0])
+    } catch {
+        return response.status(500).json({message: 'Impossible de récupérer les détails'})
+    }
+})
+
 
 //-------------------------------------------------------------------applications------------------------------------------------------------------------
 
@@ -801,6 +899,31 @@ app.delete('/api/applications/:id', async (request, response) => {
     return response.status(500).json({message: "Impossible de supprimer la candidature"});
   }
 });
+
+
+app.get('/api/ads/:id/applied', async (request, response) => {
+    if (!request.session.userId) {
+        return response.status(401).json({message: 'Non connecté'})
+    }
+
+    const adId = Number(request.params.id)
+
+    if (!Number.isInteger(adId) || adId <= 0) {
+        return response.status(400).json({message: 'ID annonce invalide'})
+    }
+
+    try {
+        const [applications] = await database.execute<RowDataPacket[]>(
+            'SELECT id FROM applications WHERE ad_id = ? AND user_id = ? LIMIT 1',
+            [adId, request.session.userId]
+        )
+
+        return response.status(200).json({applied: applications.length > 0})
+    } catch (error) {
+        console.error('Erreur vérification candidature :', error)
+        return response.status(500).json({message: 'Impossible de vérifier la candidature'})
+    }
+})
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`API listening on port ${port}`)
