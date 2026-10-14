@@ -73,7 +73,7 @@ async function deleteUser(id :number){
                             <button @click = "deleteUser(user.id)">Supprimer</button>
                         </td>
                     </tr>
-                    <p v-if = "feedback != ''">{{ feedback}}</p>
+                    <p v-if = "feedback != ''">{{ feedback }}</p>
                 </tbody>
             </table>
         </section>
