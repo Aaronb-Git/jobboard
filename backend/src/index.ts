@@ -661,27 +661,38 @@ app.delete('/api/ads/:id', async (request, response) => {
 });
 
 
-app.get('/api/ads/preview', async (_request, response) => {
-  try {
-    const [ads] = await database.query(`
-      SELECT
-        ads.id,
-        ads.title,
-        companies.name AS name_company,
-        ads.one_sentence_description,
-        ads.place
-      FROM ads
-      INNER JOIN companies ON companies.id = ads.company_id
-      ORDER BY ads.id DESC
-    `)
 
-    response.json(ads)
-  } catch {
-    response.status(500).json({
-      message: 'Impossible de récupérer les annonces.',
-    })
-  }
+app.get('/api/ads/preview', async (request, response) => {
+    try {
+        const [ads] = await database.execute<RowDataPacket[]>(
+            `SELECT
+                ads.id,
+                ads.title,
+                companies.name AS name_company,
+                ads.one_sentence_description,
+                ads.place,
+                EXISTS (
+                    SELECT 1
+                    FROM applications
+                    WHERE applications.ad_id = ads.id
+                    AND applications.user_id = ?
+                ) AS applied
+            FROM ads
+            INNER JOIN companies ON companies.id = ads.company_id
+            ORDER BY ads.id DESC`,
+            [request.session.userId ?? 0]
+        )
+
+        return response.status(200).json(ads)
+    } catch (error) {
+        console.error('Erreur récupération annonces :', error)
+
+        return response.status(500).json({
+            message: 'Impossible de récupérer les annonces.'
+        })
+    }
 })
+
 
 app.get('/api/ads/:id/details', async (request, response) => {
     const id = Number(request.params.id)
