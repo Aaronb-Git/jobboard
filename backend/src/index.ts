@@ -660,6 +660,60 @@ app.delete('/api/ads/:id', async (request, response) => {
   }
 });
 
+
+app.get('/api/ads/preview', async (_request, response) => {
+  try {
+    const [ads] = await database.query(`
+      SELECT
+        ads.id,
+        ads.title,
+        companies.name AS name_company,
+        ads.one_sentence_description,
+        ads.place
+      FROM ads
+      INNER JOIN companies ON companies.id = ads.company_id
+      ORDER BY ads.id DESC
+    `)
+
+    response.json(ads)
+  } catch {
+    response.status(500).json({
+      message: 'Impossible de récupérer les annonces.',
+    })
+  }
+})
+
+app.get('/api/ads/:id/details', async (request, response) => {
+    const id = Number(request.params.id)
+
+    if (!Number.isInteger(id) || id <= 0) {
+        return response.status(400).json({message: 'ID invalide'})
+    }
+
+    try {
+        const [ads] = await database.execute<RowDataPacket[]>(
+            `SELECT
+                full_description,
+                wages,
+                working_time,
+                advantages,
+                diploma_needed
+            FROM ads
+            WHERE id = ?`,
+            [id]
+        )
+
+        if (ads.length === 0) {
+            return response.status(404).json({message: 'Annonce introuvable'})
+        }
+
+        return response.status(200).json(ads[0])
+    } catch {
+        return response.status(500).json({message: 'Impossible de récupérer les détails'})
+    }
+})
+
+
 //-------------------------------------------------------------------applications------------------------------------------------------------------------
 
 app.get('/api/applications', async (request, response) => {
