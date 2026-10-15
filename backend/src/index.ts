@@ -49,6 +49,7 @@ app.get('/api/ads', async (_request, response) => {
       SELECT
         ads.id,
         ads.title,
+        ads.company_id,
         companies.name AS name_company,
         ads.one_sentence_description,
         ads.full_description,
