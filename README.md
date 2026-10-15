@@ -38,3 +38,30 @@ Pour réinitialiser la base et effacer ses données locales : `docker compose do
 - Le port `3306` est aussi publié sur l’ordinateur pour permettre l’utilisation d’un outil SQL local.
 
 Les valeurs du `.env` fourni sont réservées au développement local. Ne mettez jamais de vrais secrets dans Git.
+
+## Tests unitaires rapides
+
+Avec Node.js 22 à jour, depuis la racine du projet :
+
+```sh
+cd frontend
+npm install
+npm run test:run
+```
+
+Pour relancer les tests automatiquement pendant les modifications : `npm test`.
+Docker, MariaDB et le serveur API ne sont pas nécessaires : les réponses HTTP sont simulées.
+
+Les 10 tests couvrent les filtres et compteurs des annonces, les visiteurs, la liste vide,
+les erreurs de chargement, l'affichage d'une carte, le cache des détails,
+le statut « déjà postulé », la désactivation du bouton après une erreur
+et la redirection vers la connexion.
+
+GitHub Actions lance ces tests à chaque push et pull request.
+Ce workflow vérifie uniquement ces tests frontend ; il ne lance ni build, ni déploiement.
+
+Validation de cette livraison : les dépendances n'ont pas pu être téléchargées dans
+la session de préparation (accès réseau bloqué). Les tests et le build n'ont donc
+pas pu être exécutés. Le lockfile d'origine est conservé ; le premier `npm install`
+le complétera avec les dépendances de test. Enregistrer ensuite ce lockfile dans Git
+permettra de remplacer l'étape `npm install --no-audit --no-fund` du workflow par `npm ci`.
