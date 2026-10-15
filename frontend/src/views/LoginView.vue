@@ -33,7 +33,20 @@ async function login() {
 
             await updateNavbar?.()
 
-            await router.push('/')
+            const meResponse = await fetch('/api/me')
+
+            if (!meResponse.ok) {
+                message.value = 'Impossible de récupérer votre profil'
+                return
+            }
+
+            const currentUser = await meResponse.json()
+
+            if (currentUser.is_admin === true) {
+                await router.push('/admin')
+            } else {
+                await router.push('/')
+            }
         }
     } catch (error) {
         message.value = 'Erreur lors de la connexion'

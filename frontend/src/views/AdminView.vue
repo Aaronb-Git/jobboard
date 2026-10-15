@@ -3,6 +3,30 @@ import {onMounted, ref} from 'vue'
 
 const activeTab = ref('users')
 const feedback = ref('')
+const isAdmin = ref(false)
+const checkingAccess = ref(true)
+
+onMounted(async () => {
+    try {
+        const response = await fetch('/api/me')
+
+        if (response.ok) {
+            const user = await response.json()
+            isAdmin.value = user.is_admin === true
+        }
+
+        if (isAdmin.value) {
+            await Promise.all([
+                loadUsers(),
+                loadCompanies(),
+                loadAds(),
+                loadApplis()
+            ])
+        }
+    } finally {
+        checkingAccess.value = false
+    }
+})
 ///////////////////////////////////////////////////////users/////////////////////////////////////////////////////////////////////
 const editingUser = ref<AdminUser | null>(null)
 const users = ref<AdminUser[]>([])
@@ -71,7 +95,6 @@ async function loadUsers() {
         users.value = await response.json()
    }  
 }
-onMounted(loadUsers);
 
 async function deleteUser(id :number){
     const response = await fetch(`/api/users/${id}`, {
@@ -145,7 +168,6 @@ async function loadCompanies(){
         companies.value = await response.json()
     }
 }
-onMounted(loadCompanies);
 
 async function deleteCompany(id : number){
     const response = await fetch(`/api/companies/${id}`,{
@@ -206,6 +228,7 @@ async function createAd(){
         showCreatedAd.value = false
     }
 }
+
 async function saveAd(){
     if(editingAd.value === null){
         return
@@ -224,6 +247,7 @@ async function saveAd(){
         editingAd.value = null
     }
 }
+
 async function loadAds(){
     const response = await fetch(`/api/ads`)
     if(!response.ok){
@@ -232,7 +256,6 @@ async function loadAds(){
         ads.value = await response.json()
     }
 }
-onMounted(loadAds)
 
 async function deleteAd(id: number){
     const response = await fetch(`/api/ads/${id}`,{
@@ -311,7 +334,6 @@ async function loadApplis(){
         applis.value = await response.json()
     }
 }
-onMounted(loadApplis)
 
 async function deleteAppli(id: number){
     const response = await fetch(`/api/applications/${id}`,{
@@ -325,7 +347,18 @@ async function deleteAppli(id: number){
 }
 </script>
 <template>
-    <main class="min-h-screen bg-blue-300 p-4 sm:p-8">
+<p v-if="checkingAccess" class="p-6">Chargement…</p>
+
+<main
+    v-else-if="!isAdmin"
+    class="fixed inset-0 z-50 flex min-h-screen items-center justify-center bg-white text-gray-900"
+>
+    <div class="p-6 text-center">
+        <h1 class="text-6xl font-bold">404</h1>
+        <p class="mt-4 text-xl">Not Found</p>
+    </div>
+</main>
+<main v-else class="min-h-screen bg-blue-300 p-4 sm:p-8">
     <h1 class="mb-8 text-center text-3xl font-bold">Administration</h1>
     <div class="mx-auto max-w-screen-2xl">
         <button type="button" class="mr-2 mb-3 rounded-xl px-5 py-3 font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-800" :class="activeTab === 'users' ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-blue-100 text-blue-900 hover:bg-blue-200'" :aria-pressed="activeTab === 'users'" @click="activeTab = 'users'"> Utilisateurs</button>
